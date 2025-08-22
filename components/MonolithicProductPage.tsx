@@ -1,106 +1,131 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useCart } from './CartContext';
+import { useCart } from "./CartContext";
+import type { Product } from "../lib/graphql";
+import { useState } from "react";
 
-export default function MonolithicProductPage({ products }: any) {
+interface MonolithicProductPageProps {
+  products: Product[];
+}
+
+type SortOrder = "name" | "price";
+
+export default function MonolithicProductPage({
+  products,
+}: MonolithicProductPageProps) {
   const { addToCart } = useCart();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState('name');
-  const [filterPrice, setFilterPrice] = useState(1000);
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("name");
+  const [filterPrice, setFilterPrice] = useState<number>(1000);
 
-  const filteredProducts = products
-    ?.filter(
-      (product: any) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        product.price <= filterPrice
-    )
-    .sort((a: any, b: any) => {
-      if (sortOrder === 'name') return a.name.localeCompare(b.name);
-      if (sortOrder === 'price') return a.price - b.price;
-      return 0;
-    });
-
-  const containerStyle = {
-    padding: '20px',
-    backgroundColor: '#f5f5f5',
-  };
+  const filteredProducts: Product[] =
+    products
+      ?.filter(
+        (product: Product) =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          product.price <= filterPrice
+      )
+      .sort((a: Product, b: Product) => {
+        if (sortOrder === "name") return a.name.localeCompare(b.name);
+        if (sortOrder === "price") return a.price - b.price;
+        return 0;
+      }) || [];
 
   return (
-    <div style={containerStyle} className='min-h-screen'>
-      <div className='mb-8'>
-        <h1 style={{ fontSize: '32px', fontWeight: 'bold' }}>
+    <div className="min-h-screen bg-gray-50 p-5">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">
           Product Catalog
         </h1>
 
-        <div className='flex gap-4 mt-4'>
+        <div className="flex flex-wrap gap-4">
           <input
-            type='text'
+            type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder='Search products...'
-            style={{ border: '1px solid #ccc', padding: '8px' }}
-            className='rounded'
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setSearchTerm(e.target.value)
+            }
+            placeholder="Search products..."
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
 
           <select
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            style={{ padding: '8px' }}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setSortOrder(e.target.value as SortOrder)
+            }
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value='name'>Sort by Name</option>
-            <option value='price'>Sort by Price</option>
+            <option value="name">Sort by Name</option>
+            <option value="price">Sort by Price</option>
           </select>
 
-          <div>
-            <label>Max Price: ${filterPrice}</label>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="price-filter"
+              className="text-sm font-medium text-gray-700"
+            >
+              Max Price: ${filterPrice}
+            </label>
             <input
-              type='range'
-              min='0'
-              max='500'
+              id="price-filter"
+              type="range"
+              min="0"
+              max="500"
               value={filterPrice}
-              onChange={(e) => setFilterPrice(Number(e.target.value))}
-              style={{ width: '200px' }}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFilterPrice(Number(e.target.value))
+              }
+              className="w-48"
             />
           </div>
         </div>
       </div>
 
-      <div className='grid grid-cols-3 gap-6'>
-        {filteredProducts?.map((product: any) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProducts.map((product: Product) => (
           <div
             key={product.id}
-            style={{ backgroundColor: 'white', padding: '16px' }}
+            className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
           >
-            <img src={product.imageUrl} className='w-full h-48 object-cover' />
+            <img
+              src={product.imageUrl || "/placeholder.svg"}
+              alt={product.name}
+              className="w-full h-48 object-cover"
+            />
 
-            <h3 style={{ fontSize: '18px', marginTop: '8px' }}>
-              {product.name}
-            </h3>
-            <p className='text-gray-600 mt-2'>{product.description}</p>
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {product.name}
+              </h3>
+              <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                {product.description}
+              </p>
 
-            <div className='mt-4'>
-              <span style={{ color: 'green', fontSize: '20px' }}>
-                ${product.price.toFixed(2)}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xl font-bold text-green-600">
+                  ${product.price.toFixed(2)}
+                </span>
 
-              <button
-                onClick={() => addToCart(product)}
-                style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  padding: '8px 16px',
-                  marginLeft: '16px',
-                }}
-                className='rounded'
-              >
-                Add to Cart
-              </button>
+                <button
+                  onClick={() => addToCart(product)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Add to Cart
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">
+            No products found matching your criteria.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

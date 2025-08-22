@@ -1,96 +1,86 @@
-'use client';
+"use client"
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from 'react';
-import { Product } from '../lib/graphql';
+import { createContext, useContext, useState, type ReactNode, useMemo, useCallback } from "react"
+import type { Product } from "../lib/graphql"
 
 interface CartItem extends Product {
-  quantity: number;
+  quantity: number
 }
 
 interface CartContextType {
-  cartItems: CartItem[];
-  cartItemCount: number;
-  totalPrice: number;
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  clearCart: () => void;
+  cartItems: CartItem[]
+  cartItemCount: number
+  totalPrice: number
+  addToCart: (product: Product) => void
+  removeFromCart: (productId: string) => void
+  clearCart: () => void
+  updateQuantity: (productId: string, quantity: number) => void
 }
 
-const CartContext = createContext<CartContextType | undefined>(undefined);
+const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [cartTotal, setCartTotal] = useState(0);
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
 
-  const addToCart = (product: Product) => {
+  const cartItemCount = useMemo(() => {
+    return cartItems.reduce((total, item) => total + item.quantity, 0)
+  }, [cartItems])
+
+  const totalPrice = useMemo(() => {
+    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
+  }, [cartItems])
+
+  const addToCart = useCallback((product: Product) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.id === product.id);
+      const existingItem = prevItems.find((item) => item.id === product.id)
       if (existingItem) {
-        return prevItems.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+        return prevItems.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item))
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return [...prevItems, { ...product, quantity: 1 }]
       }
-    });
-  };
+    })
+  }, [])
 
-  const removeFromCart = (productId: string) => {
-    setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id !== productId)
-    );
-  };
+  const removeFromCart = useCallback((productId: string) => {
+    setCartItems((prevItems) => prevItems.filter((item) => item.id !== productId))
+  }, [])
 
-  const clearCart = () => {
-    setCartItems([]);
-  };
+  const updateQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (quantity <= 0) {
+        removeFromCart(productId)
+        return
+      }
 
-  useEffect(() => {
-    const total = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-    setCartTotal(total);
-  }, []);
+      setCartItems((prevItems) => prevItems.map((item) => (item.id === productId ? { ...item, quantity } : item)))
+    },
+    [removeFromCart],
+  )
 
-  // Recalculating on every render
-  const cartItemCount = cartItems.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
-  const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  const clearCart = useCallback(() => {
+    setCartItems([])
+  }, [])
 
-  return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        cartItemCount,
-        totalPrice,
-        addToCart,
-        removeFromCart,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+  const contextValue = useMemo(
+    () => ({
+      cartItems,
+      cartItemCount,
+      totalPrice,
+      addToCart,
+      removeFromCart,
+      clearCart,
+      updateQuantity,
+    }),
+    [cartItems, cartItemCount, totalPrice, addToCart, removeFromCart, clearCart, updateQuantity],
+  )
+
+  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
 }
 
 export function useCart() {
-  const context = useContext(CartContext);
+  const context = useContext(CartContext)
   if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider")
   }
-  return context;
+  return context
 }
